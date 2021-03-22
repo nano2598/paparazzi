@@ -297,24 +297,24 @@ bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
 //	if (opticflow->just_switched_method)
 //	{
 //		// Create the image buffers
-		image_create(&opticflow->img_gray, img->w, img->h, IMAGE_YUV422);
-		image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_YUV422);
 //
 //		// Set the previous values
 //		opticflow->got_first_img = false;
 //	}
 
 	// Convert image to grayscale
-	struct image_t prev_img;
+	//struct image_t prev_img;
 	if (!opticflow->got_first_img)
 	{
+		image_create(&opticflow->img_gray, img->w, img->h, IMAGE_YUV422);
+		image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_YUV422);
 		image_copy(img, &opticflow->prev_img_gray);
 		opticflow->got_first_img = true;
 		return false;
 	}
     struct image_t flow;
     get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, 0.5, 3, 15, 3, 5, 1.2, 0, of_diff, img->w, img->h);
-    //*img =
+    //image_copy(&opticflow->prev_img_gray, img);
     image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
 
 

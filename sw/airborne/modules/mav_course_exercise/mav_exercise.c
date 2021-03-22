@@ -56,7 +56,7 @@
 # endif
 
 # ifndef OFDI
-# define OFDI 100000
+# define OFDI 5000
 # endif
 //uint8_t increase_nav_heading(float incrementDegrees);
 //uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
@@ -189,9 +189,9 @@ void mav_exercise_periodic(void) {
 
   switch (navigation_state) {
     case SAFE:
-      guidance_h_set_guided_body_vel(0, 0);
+      //guidance_h_set_guided_body_vel(0, 0);
       //moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-  if(floor_count<div_thresh){
+  if(floor_count<0){
 	if(count_backwards<=2)
 {
        guidance_h_set_guided_body_vel(-2, 0);
@@ -208,7 +208,7 @@ count_backwards=0;
    }
     else  if(fabs(of_diff)>of_diff_thresh) 
     {
-        yaw_rate =  Kp * of_diff + Kd * (of_diff - of_diff_prev);
+        yaw_rate =  -Kp * of_diff + Kd * (of_diff - of_diff_prev);
         if(yaw_rate > yaw_thresh)
           {yaw_rate = yaw_thresh;}
         else if(yaw_rate < -yaw_thresh)
