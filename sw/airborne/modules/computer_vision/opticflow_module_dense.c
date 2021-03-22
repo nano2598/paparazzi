@@ -25,7 +25,7 @@
  */
 
 
-#include "opticflow_module.h"
+#include "opticflow_module_dense.h"
 
 #include <stdio.h>
 #include <pthread.h>
@@ -38,6 +38,12 @@
 #include "errno.h"
 
 #include "cv.h"
+
+//#include <opencv2/core/core_c.h>
+//#include <opencv2/highgui/highgui.hpp>
+//#include <opencv2/imgproc/imgproc.hpp>
+//#include <opencv2/videoio.hpp>
+//#include <opencv2/video/tracking_c.h>
 
 /* ABI messages sender ID */
 #ifndef OPTICFLOW_AGL_ID
@@ -153,7 +159,7 @@ struct image_t *opticflow_module_calc(struct image_t *img)
   // Do the optical flow calculation
   static struct opticflow_result_t temp_result; // static so that the number of corners is kept between frames
   double temp_value;
-  if(opticflow_calc_frame(&opticflow, img, &temp_result, &temp_value)){
+  if(opticflow_calc_frame_dense(&opticflow, img, &temp_result, &temp_value)){
     // Copy the result if finished
     pthread_mutex_lock(&opticflow_mutex);
     opticflow_result = temp_result;

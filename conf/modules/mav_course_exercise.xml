@@ -6,6 +6,31 @@
     Exercise module for Autonomous Flight of MAV Course
     </description>
   </doc>
+  
+  <settings>
+          <dl_settings>
+              <dl_settings name="Divergence_threshold">
+                    <dl_setting var="div_thresh" min="10" step="100" max="2000" shortname="d_thresh"/>
+                    <dl_setting var="heading_increment" min="0" step="1" max="40" shortname="heading_inc"/>
+             </dl_settings>
+             <dl_settings name="Control gain">
+                    <dl_setting var="Kp" min="0.000001" step="0.0000001" max="0.00001" shortname="Kp"/>
+                    <dl_setting var="Kd" min="0.000001" step="0.0000001" max="0.00001" shortname="Kd"/>
+                    <dl_setting var="yaw_thresh" min="0.6" step="0.1" max="4" shortname="yt"/> 
+                    <dl_setting var="dr_vel" min="0.5" step="0.5" max="10" shortname="vx"/> 
+                    <dl_setting var="of_diff_thresh" min="100000" step="10000" max="1000000" shortname="oft"/> 
+             </dl_settings>
+         </dl_settings>
+    </settings>
+  
   <depends>cv_detect_color_object</depends>
   <!-- TODO Specify header, init, periodic, makefile sections  -->
+   <header>
+    <file name="mav_exercise.h"/>
+  </header>
+  <init fun="mav_exercise_init()"/>
+  <periodic fun="mav_exercise_periodic()" freq="4"/>
+  <makefile target="ap|nps">
+    <file name="mav_exercise.c"/>
+  </makefile>
 </module>

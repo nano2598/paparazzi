@@ -33,7 +33,7 @@
 #include <stdlib.h>
 
 // Own Header
-#include "opticflow_calculator.h"
+#include "opticflow_calculator_dense.h"
 
 // Computer Vision
 #include "lib/vision/image.h"
@@ -45,6 +45,8 @@
 #include "size_divergence.h"
 #include "linear_flow_fit.h"
 #include "modules/sonar/agl_dist.h"
+
+#include "get_flow.h"
 
 // to get the definition of front_camera / bottom_camera
 #include BOARD_CONFIG
@@ -287,6 +289,38 @@ void opticflow_calc_init(struct opticflow_t *opticflow)
   float_rmat_of_eulers(&body_to_cam, &euler);
 
 }
+
+bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
+                             struct opticflow_result_t *result, double *of_diff)
+{
+
+//	if (opticflow->just_switched_method)
+//	{
+//		// Create the image buffers
+		image_create(&opticflow->img_gray, img->w, img->h, IMAGE_YUV422);
+		image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_YUV422);
+//
+//		// Set the previous values
+//		opticflow->got_first_img = false;
+//	}
+
+	// Convert image to grayscale
+	struct image_t prev_img;
+	if (!opticflow->got_first_img)
+	{
+		image_copy(img, &opticflow->prev_img_gray);
+		opticflow->got_first_img = true;
+		return false;
+	}
+    struct image_t flow;
+    get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, 0.5, 3, 15, 3, 5, 1.2, 0, of_diff, img->w, img->h);
+    //*img =
+    image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+
+
+    return true;
+}
+
 /**
  * Run the optical flow with fast9 and lukaskanade on a new image frame
  * @param[in] *opticflow The opticalflow structure that keeps track of previous images
@@ -296,7 +330,7 @@ void opticflow_calc_init(struct opticflow_t *opticflow)
  * @return Was optical flow successful
  */
 bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result, double *value)
+                             struct opticflow_result_t *result)
 {
   if (opticflow->just_switched_method) {
     // Create the image buffers
@@ -418,14 +452,7 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
                                        &result->tracked_cnt,
                                        opticflow->window_size / 2, opticflow->subpixel_factor, opticflow->max_iterations,
                                        opticflow->threshold_vec, opticflow->max_track_corners, opticflow->pyramid_level, keep_bad_points);
-  //Berry added
-//  *value = 0;
-//  for (int i=0;i < result->tracked_cnt; i++){
-//    *value += sqrt(vectors[i].flow_x*vectors[i].flow_x + vectors[i].flow_y*vectors[i].flow_y)*(((int)(vectors[i].pos.y/opticflow->subpixel_factor) -
-//    		(int)((img->h)/2))/abs((int)(vectors[i].pos.y/opticflow->subpixel_factor) - (int)((img->h)/2)));
-//    //< Or use x_sub instead (subpixels, just like how the value is given) -- Check if sqrt is influential
-//  }
-
+  
 
   if (opticflow->track_back) {
     // TODO: Watch out!
@@ -572,14 +599,6 @@ bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
           vectors[i].flow_x -= predicted_flow_vectors[i].flow_x;
           vectors[i].flow_y -= predicted_flow_vectors[i].flow_y;
         }
-
-        *value = 0;
-        for (int i=0;i < result->tracked_cnt; i++){
-          *value += sqrt(vectors[i].flow_x*vectors[i].flow_x + vectors[i].flow_y*vectors[i].flow_y)*(((int)(vectors[i].pos.y/opticflow->subpixel_factor) -
-          		(int)((img->h)/2))/abs((int)(vectors[i].pos.y/opticflow->subpixel_factor) - (int)((img->h)/2)));
-          //< Or use x_sub instead (subpixels, just like how the value is given) -- Check if sqrt is influential
-        }
-
 
         // vectors have to be re-sorted after derotation:
         qsort(vectors, result->tracked_cnt, sizeof(struct flow_t), cmp_flow);
@@ -997,35 +1016,12 @@ bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img,
  * @param[in] *img The image frame to calculate the optical flow from
  * @param[out] *result The optical flow result
  */
-bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result, double *value)
+bool opticflow_calc_frame_dense(struct opticflow_t *opticflow, struct image_t *img,
+                          struct opticflow_result_t *result, double *of_diff)
 {
+  // Attempted to use calc_fast9_lucas_kanade as template
   bool flow_successful = false;
-  // A switch counter that checks in the loop if the current method is similar,
-  // to the previous (for reinitializing structs)
-  static int8_t switch_counter = -1;
-  if (switch_counter != opticflow->method) {
-    opticflow->just_switched_method = true;
-    switch_counter = opticflow->method;
-    // Clear the static result
-    memset(result, 0, sizeof(struct opticflow_result_t));
-  } else {
-    opticflow->just_switched_method = false;
-  }
-
-  // Switch between methods (0 = fast9/lukas-kanade, 1 = EdgeFlow)
-  if (opticflow->method == 0) {
-    flow_successful = calc_fast9_lukas_kanade(opticflow, img, result, value);
-  } else if (opticflow->method == 1) {
-    flow_successful = calc_edgeflow_tot(opticflow, img, result);
-  }
-
-  /* Rotate velocities from camera frame coordinates to body coordinates for control
-  * IMPORTANT!!! This frame to body orientation should be the case for the Parrot
-  * ARdrone and Bebop, however this can be different for other quadcopters
-  * ALWAYS double check!
-  */
-  float_rmat_transp_vmult(&result->vel_body, &body_to_cam, &result->vel_cam);
+  flow_successful = calc_farneback(opticflow, img, result, of_diff);
 
   return flow_successful;
 }

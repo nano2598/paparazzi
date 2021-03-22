@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Matteo Barbera <matteo.barbera97@gmail.com>
+ * Copyright (C) 2014 Hann Woei Ho
  *
  * This file is part of Paparazzi.
  *
@@ -18,18 +18,25 @@
  * <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PAPARAZZI_MAV_EXERCISE_H
-#define PAPARAZZI_MAV_EXERCISE_H
+/**
+ * @file modules/computer_vision/opticflow_module.h
+ * @brief optical-flow calculation for Parrot Drones
+ *
+ */
 
-extern void mav_exercise_init(void);
-extern void mav_exercise_periodic(void);
-extern float div_thresh;
-extern float heading_increment;
-extern float oag_max_speed;         // max flight speed [m/s]
-extern float oag_heading_rate;      // heading rate setpoint [rad/s]
-extern double Kp;
-extern double Kd;
-extern float yaw_thresh;
-extern float dr_vel;
-extern float of_diff_thresh;
-#endif //PAPARAZZI_MAV_EXERCISE_H
+#ifndef OPTICFLOW_MODULE_H
+#define OPTICFLOW_MODULE_H
+
+// Include opticflow calculator
+#include "opticflow/opticflow_calculator_dense.h"
+
+// Needed for settings
+extern struct opticflow_t opticflow;
+
+// Module functions
+extern void opticflow_module_init(void);
+extern void opticflow_module_run(void);
+extern void opticflow_module_start(void);
+extern void opticflow_module_stop(void);
+
+#endif /* OPTICFLOW_MODULE_H */

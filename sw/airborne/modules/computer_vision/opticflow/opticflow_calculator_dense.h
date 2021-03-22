@@ -32,6 +32,14 @@
 #ifndef OPTICFLOW_CALCULATOR_H
 #define OPTICFLOW_CALCULATOR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #include "std.h"
 #include "inter_thread_data.h"
 #include "lib/vision/image.h"
@@ -85,13 +93,15 @@ struct opticflow_t {
 #define FAST9_MAX_CORNERS 512
 
 extern void opticflow_calc_init(struct opticflow_t *opticflow);
-extern bool opticflow_calc_frame(struct opticflow_t *opticflow, struct image_t *img,
-                          struct opticflow_result_t *result, double *value);
+extern bool opticflow_calc_frame_dense(struct opticflow_t *opticflow, struct image_t *img,
+                          struct opticflow_result_t *result, double *of_diff);
 
 extern bool calc_fast9_lukas_kanade(struct opticflow_t *opticflow, struct image_t *img,
-                             struct opticflow_result_t *result, double *value);
+                             struct opticflow_result_t *result);
 extern bool calc_edgeflow_tot(struct opticflow_t *opticflow, struct image_t *img,
                        struct opticflow_result_t *result);
+extern bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
+                       struct opticflow_result_t *result, double *of_diff);
 
 extern void kalman_filter_opticflow_velocity(float *velocity_x, float *velocity_y, float *acceleration_measurement, float fps,
                                       float *measurement_noise, float process_noise, bool reinitialize_kalman);
