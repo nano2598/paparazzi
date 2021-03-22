@@ -50,9 +50,9 @@ int get_flow(char *prev, char *next,
   cvtColor(M2, nextmat, CV_YUV2GRAY_Y422);
   //Attempted resizing but it changed the difference value way too much
   //Likely something fundamentally wrong with how I pass the video frames
-  float scale = 0.5;
-  resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
-  resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
+  float scale = 1;
+//  resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
+//  resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
 
 
   calcOpticalFlowFarneback(prevmat, nextmat,
