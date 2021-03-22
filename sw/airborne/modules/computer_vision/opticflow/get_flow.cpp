@@ -48,13 +48,19 @@ int get_flow(char *prev, char *next,
 
   cvtColor(M1, prevmat, CV_YUV2GRAY_Y422);
   cvtColor(M2, nextmat, CV_YUV2GRAY_Y422);
+  //Attempted resizing but it changed the difference value way too much
+  //Likely something fundamentally wrong with how I pass the video frames
+  float scale = 0.5;
+  resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
+  resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
+
 
   calcOpticalFlowFarneback(prevmat, nextmat,
                                  flowmat, pyr_scale, levels, winsize,
                                   iterations,  poly_n,  poly_sigma, flags);
 
-  Mat leftflow = flowmat(Range(0, h/2), Range(0, w));
-  Mat rightflow = flowmat(Range(h/2, h), Range(0, w));
+  Mat leftflow = flowmat(Range(0, h/2 * scale), Range(0, w * scale));
+  Mat rightflow = flowmat(Range(h/2 * scale, h * scale), Range(0, w * scale));
 
   Mat magnitudeleft, angleleft, magnituderight, angleright;
   Mat flow_parts_left[2], flow_parts_right[2];
