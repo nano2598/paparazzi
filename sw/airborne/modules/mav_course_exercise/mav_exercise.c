@@ -37,7 +37,7 @@
 
 
 # ifndef KPI
-# define KPI 0.000001
+# define KPI 0.000018
 # endif
 
 # ifndef KDI
@@ -45,18 +45,18 @@
 # endif
 
 # ifndef YI
-# define YI 2.f
+# define YI 1.f
 # endif
 
 # ifndef VI
-# define VI 2.f
+# define VI 1.5f
 # endif
 # ifndef DIVI
 # define DIVI 0.0001f
 # endif
 
 # ifndef OFDI
-# define OFDI 5000
+# define OFDI 9000
 # endif
 //uint8_t increase_nav_heading(float incrementDegrees);
 //uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
@@ -86,7 +86,7 @@ float avoidance_heading_direction = 1.f;  // heading change direction for avoida
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 float heading_increment = 20.f;          // heading angle increment [deg]
 float div_1 = 0.f;
-float div_thresh = 100 * 5.f;
+float div_thresh = 120;
 double Kp = KPI;
 double Kd = KDI;
 float oag_max_speed = 0.5f;               // max flight speed [m/s]
@@ -98,7 +98,7 @@ float of_diff_thresh = OFDI;
 float of_diff ; // difference in optical flow between right and left side
 float of_diff_prev = 0;
 float yaw_thresh = YI;
-float dr_vel = YI;
+float dr_vel = VI;
 int count_backwards=0;
 // needed to receive output from a separate module running on a parallel process
 
@@ -171,7 +171,7 @@ void mav_exercise_periodic(void) {
   // front_camera defined in airframe xml, with the video_capture module
   int32_t color_count_threshold = 10000 * oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
-  PRINT("Color_count: %d  threshold: %d state: %d \n", floor_count, color_count_threshold, navigation_state);
+  //PRINT("Color_count: %d  threshold: %d state: %d \n", floor_count, color_count_threshold, navigation_state);
   PRINT("OF difference: %f \n", of_diff);
   PRINT("OF difference prev: %f \n", of_diff_prev);
   PRINT("Yaw rate: %f \n", stateGetBodyRates_f()->r);
@@ -191,7 +191,7 @@ void mav_exercise_periodic(void) {
     case SAFE:
       //guidance_h_set_guided_body_vel(0, 0);
       //moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-  if(floor_count<0){
+  if(floor_count<500){
 	if(count_backwards<=2)
 {
        guidance_h_set_guided_body_vel(-2, 0);
@@ -310,7 +310,7 @@ PRINT("NO ROTATION");
       if(count<10)
       {
       while(!rotated){
-        rotated = autopilot_guided_goto_ned_relative (0,0,0,RadOfDeg(180));
+        rotated = autopilot_guided_goto_ned_relative (0,0,0,RadOfDeg(145));
       }
       }
        navigation_state = REENTER_ARENA;
