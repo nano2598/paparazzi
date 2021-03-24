@@ -36,7 +36,7 @@ using namespace cv;
 
 int get_flow(char *prev, char *next,
         struct image_t *flow, double pyr_scale, int levels, int winsize,
-        int iterations, int poly_n, double poly_sigma, int flags, double *of_diff, int w, int h)
+        int iterations, int poly_n, double poly_sigma, int flags, double *of_diff, float *div, int w, int h)
 {
   // Create a new image, using the original bebop image.
   Mat M1(h, w, CV_8UC2, prev);
@@ -58,6 +58,8 @@ int get_flow(char *prev, char *next,
                                  flowmat, pyr_scale, levels, winsize,
                                   iterations,  poly_n,  poly_sigma, flags);
 
+
+
   Mat leftflow = flowmat(Range(0, h/2 * scale), Range(0, w * scale));
   Mat rightflow = flowmat(Range(h/2 * scale, h * scale), Range(0, w * scale));
 
@@ -72,6 +74,15 @@ int get_flow(char *prev, char *next,
 
   Mat flow_parts[2];
   split(flowmat, flow_parts);
+
+  Mat div_ux;
+  Mat div_vy;
+
+  Sobel(flow_parts[0], div_ux, CV_8U, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+  Sobel(flow_parts[0], div_vy, CV_8U, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+
+  *div = sum(div_ux)[0] + sum(div_vy)[0];
+
   Mat magnitude, angle, magn_norm;
   cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
   normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
