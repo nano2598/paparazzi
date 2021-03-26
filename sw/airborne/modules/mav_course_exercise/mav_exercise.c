@@ -37,7 +37,7 @@
 
 
 # ifndef KPI
-# define KPI 0.000018
+# define KPI 0.001
 # endif
 
 # ifndef KDI
@@ -49,11 +49,11 @@
 # endif
 
 # ifndef YI
-# define YI 1.f
+# define YI 0.5
 # endif
 
 # ifndef VI
-# define VI 1.f
+# define VI 0.15
 # endif
 
 # ifndef DIVI
@@ -61,7 +61,7 @@
 # endif
 
 # ifndef OFDI
-# define OFDI 8000
+# define OFDI 500
 # endif
 
 # ifndef GRDI
@@ -248,9 +248,9 @@ void mav_exercise_periodic(void) {
           navigation_state = OUT_OF_BOUNDS;
         }
       // Go backwards for two counts
-      else if(count_backwards<=2)
+      else if(count_backwards<=4)
       {
-          guidance_h_set_guided_body_vel(-2, 0);
+          guidance_h_set_guided_body_vel(-dr_vel, 0);
           yaw_rate =0;
           count_backwards++;
           PRINT("GO BACK \n");
@@ -270,7 +270,7 @@ void mav_exercise_periodic(void) {
       // On 'first' loop, reverse a bit and set target heading
       if(count_oob == 0)
       {
-          guidance_h_set_guided_body_vel(-1, 0);
+          guidance_h_set_guided_body_vel(-dr_vel, 0);
       	  guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi + RadOfDeg(160));
       }
       // Essentially a counter to make it wait so that it doesn't immediately go to another state
