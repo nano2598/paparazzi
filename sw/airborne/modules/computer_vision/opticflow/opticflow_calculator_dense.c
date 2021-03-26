@@ -79,9 +79,34 @@ PRINT_CONFIG_VAR(OPTICFLOW_CORNER_METHOD)
 PRINT_CONFIG_VAR(OPTICFLOW_MAX_TRACK_CORNERS)
 
 #ifndef OPTICFLOW_WINDOW_SIZE
-#define OPTICFLOW_WINDOW_SIZE 10
+#define OPTICFLOW_WINDOW_SIZE 15
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_WINDOW_SIZE)
+
+#ifndef OPTICFLOW_PYR_SCALE
+#define OPTICFLOW_PYR_SCALE 0.5
+#endif
+PRINT_CONFIG_VAR(OPTICFLOW_PYR_SCALE)
+
+#ifndef OPTICFLOW_LEVELS
+#define OPTICFLOW_LEVELS 3
+#endif
+PRINT_CONFIG_VAR(OPTICFLOW_LEVELS)
+
+#ifndef OPTICFLOW_POLY_N
+#define OPTICFLOW_POLY_N 5
+#endif
+PRINT_CONFIG_VAR(OPTICFLOW_POLY_N)
+
+#ifndef OPTICFLOW_POLY_SIGMA
+#define OPTICFLOW_POLY_SIGMA 1.2
+#endif
+PRINT_CONFIG_VAR(OPTICFLOW_POLY_SIGMA)
+
+#ifndef OPTICFLOW_FLAGS
+#define OPTICFLOW_FLAGS 0
+#endif
+PRINT_CONFIG_VAR(OPTICFLOW_FLAGS)
 
 #ifndef OPTICFLOW_SEARCH_DISTANCE
 #define OPTICFLOW_SEARCH_DISTANCE 20
@@ -99,7 +124,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_SUBPIXEL_FACTOR)
 PRINT_CONFIG_VAR(OPTICFLOW_RESOLUTION_FACTOR)
 
 #ifndef OPTICFLOW_MAX_ITERATIONS
-#define OPTICFLOW_MAX_ITERATIONS 10
+#define OPTICFLOW_MAX_ITERATIONS 3
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_MAX_ITERATIONS)
 
@@ -252,6 +277,11 @@ void opticflow_calc_init(struct opticflow_t *opticflow)
   /* Set the default values */
   opticflow->method = OPTICFLOW_METHOD; //0 = LK_fast9, 1 = Edgeflow
   opticflow->window_size = OPTICFLOW_WINDOW_SIZE;
+  opticflow->pyr_scale = OPTICFLOW_PYR_SCALE;
+  opticflow->levels = OPTICFLOW_LEVELS;
+  opticflow->poly_n = OPTICFLOW_POLY_N;
+  opticflow->poly_sigma = OPTICFLOW_POLY_SIGMA;
+  opticflow->flags = OPTICFLOW_FLAGS;
   opticflow->search_distance = OPTICFLOW_SEARCH_DISTANCE;
   opticflow->derotation = OPTICFLOW_DEROTATION; //0 = OFF, 1 = ON
   opticflow->derotation_correction_factor_x = OPTICFLOW_DEROTATION_CORRECTION_FACTOR_X;
@@ -293,34 +323,23 @@ void opticflow_calc_init(struct opticflow_t *opticflow)
 bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
                              struct opticflow_result_t *result, double *of_diff)
 {
-
-//	if (opticflow->just_switched_method)
-//	{
-//		// Create the image buffers
-//
-//		// Set the previous values
-//		opticflow->got_first_img = false;
-//	}
-
-	// Convert image to grayscale
-	//struct image_t prev_img;
-	if (!opticflow->got_first_img)
-	{
+	if (!opticflow->got_first_img) {
 		image_create(&opticflow->img_gray, img->w, img->h, IMAGE_YUV422);
 		image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_YUV422);
 		image_copy(img, &opticflow->prev_img_gray);
 		opticflow->got_first_img = true;
 		return false;
 	}
-    struct image_t flow;
+  struct image_t flow;
 	image_copy(img, &opticflow->img_gray);
-    get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, 0.5, 3, 15, 3, 5, 1.2, 0,
-    		of_diff, &result->div_size, img->w, img->h);
-    image_copy(&opticflow->prev_img_gray, img);
-    image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+  get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
+      opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
+      of_diff, &result->div_size, img->w, img->h);
+  image_copy(&opticflow->prev_img_gray, img);
+  image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
 
 
-    return true;
+  return true;
 }
 
 /**

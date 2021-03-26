@@ -29,7 +29,11 @@ extern float oag_max_speed;         // max flight speed [m/s]
 extern float oag_heading_rate;      // heading rate setpoint [rad/s]
 extern double Kp;
 extern double Kd;
+extern double Kyd;
 extern float yaw_thresh;
 extern float dr_vel;
 extern float of_diff_thresh;
+extern float green_thresh;
+extern float divergence_thresh;
+extern int robust;
 #endif //PAPARAZZI_MAV_EXERCISE_H

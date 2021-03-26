@@ -67,6 +67,11 @@
       <dl_setting var="opticflow.method" min="0" step="1" max="1" module="computer_vision/opticflow_module" shortname="method" values="LK_Fast9|EdgeFlow" param="METHOD"/>
       <dl_setting var="opticflow.corner_method" min="0" step="1" max="1" module="computer_vision/opticflow_module" shortname="corner_method" values="exhaustive-FAST|ACT-FAST" param="CORNER_METHOD"/>
         <dl_setting var="opticflow.window_size" module="computer_vision/opticflow_module" min="0" step="1" max="20" shortname="window_size" param="OPTICFLOW_WINDOW_SIZE"/>
+        <dl_setting var="opticflow.pyr_scale" module="computer_vision/opticflow_module" min="0.0" step="0.1" max="1" shortname="pyr_scale" param="OPTICFLOW_PYR_SIZE"/>
+        <dl_setting var="opticflow.levels" module="computer_vision/opticflow_module" min="0" step="1" max="20" shortname="levels" param="OPTICFLOW_LEVELS"/>
+        <dl_setting var="opticflow.poly_n" module="computer_vision/opticflow_module" min="0" step="1" max="20" shortname="poly_n" param="OPTICFLOW_POLY_N"/>
+        <dl_setting var="opticflow.poly_sigma" module="computer_vision/opticflow_module" min="0.0" step="0.1" max="3" shortname="poly_sigma" param="OPTICFLOW_POLY_SIGMA"/>
+        <dl_setting var="opticflow.flags" module="computer_vision/opticflow_module" min="0" step="1" max="20" shortname="flags" param="OPTICFLOW_FLAGS"/>
         <dl_setting var="opticflow.search_distance" module="computer_vision/opticflow_module" min="0" step="1" max="50" shortname="search_distance" param="SEARCH_DISTANCE"/>
         <dl_setting var="opticflow.subpixel_factor" module="computer_vision/opticflow_module" min="0" step="10" max="1000" shortname="subpixel_factor" param="OPTICFLOW_SUBPIXEL_FACTOR"/>
         <dl_setting var="opticflow.resolution_factor" module="computer_vision/opticflow_module" min="10" step="10" max="10000" shortname="resolution_factor" param="OPTICFLOW_RESOLUTION_FACTOR"/>
