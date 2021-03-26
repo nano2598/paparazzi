@@ -78,8 +78,8 @@ int get_flow(char *prev, char *next,
   Mat div_ux;
   Mat div_vy;
 
-  Sobel(flow_parts[0], div_ux, CV_8U, 1, 0, 3, 1, 0, BORDER_DEFAULT);
-  Sobel(flow_parts[0], div_vy, CV_8U, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+  Sobel(flow_parts[0], div_ux, CV_32FC1, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+  Sobel(flow_parts[0], div_vy, CV_32FC1, 0, 1, 3, 1, 0, BORDER_DEFAULT);
 
   *div = sum(div_ux)[0] + sum(div_vy)[0];
 
