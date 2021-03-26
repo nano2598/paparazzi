@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 // Own Header
 #include "opticflow_calculator_dense.h"
@@ -252,7 +253,7 @@ PRINT_CONFIG_VAR(OPTICFLOW_TRACK_BACK)
 #endif
 PRINT_CONFIG_VAR(OPTICFLOW_SHOW_FLOW)
 
-
+#define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 //Include median filter
 #include "filters/median_filter.h"
@@ -330,13 +331,22 @@ bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
 		opticflow->got_first_img = true;
 		return false;
 	}
-  struct image_t flow;
+	struct image_t flow;
 	image_copy(img, &opticflow->img_gray);
-//  get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
-//      opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
-//      of_diff, &result->div_size, img->w, img->h);
-  image_copy(&opticflow->prev_img_gray, img);
-  image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
+
+	clock_t start, end;
+	double cpu_time_used;
+
+	start = clock();
+
+	get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
+	  opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
+	  of_diff, &result->div_size, img->w, img->h);
+	end = clock();
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	PRINT("Time taken %lf \n", cpu_time_used);
+	image_copy(&opticflow->prev_img_gray, img);
+	image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
 
 
   return true;
