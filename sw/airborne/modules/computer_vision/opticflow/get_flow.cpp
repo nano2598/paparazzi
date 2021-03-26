@@ -49,7 +49,7 @@ int get_flow(char *prev, char *next,
   cvtColor(M1, prevmat, CV_YUV2GRAY_Y422);
   cvtColor(M2, nextmat, CV_YUV2GRAY_Y422);
 
-  float scale = 0.25;
+  float scale = 0.2;
   resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
   resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
 
@@ -87,7 +87,7 @@ int get_flow(char *prev, char *next,
 //  cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
 //  normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
 //  angle *= ((1.f / 360.f) * (180.f / 255.f));
-  //build hsv image
+//  //build hsv image
 //  Mat _hsv[3], hsv, hsv8, bgr;
 //  _hsv[0] = angle;
 //  _hsv[1] = Mat::ones(angle.size(), CV_32F);
