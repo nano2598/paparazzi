@@ -65,7 +65,7 @@
 # endif
 
 # ifndef GRDI
-# define GRDI 1500
+# define GRDI 1000
 # endif
 
 # ifndef DVDI
@@ -73,7 +73,7 @@
 # endif
 
 # ifndef RBST
-# define RBST 4
+# define RBST 6
 # endif
 
 enum navigation_state_t {
@@ -181,12 +181,13 @@ void mav_exercise_periodic(void) {
   PRINT("OF difference prev: %f \n", of_diff_prev);
   PRINT("Yaw rate: %f \n", stateGetBodyRates_f()->r);
   PRINT("Divergence value is: %f \n",div_1);
-  PRINT("Green count value is: %f \n",floor_count);
+  PRINT("Green count value is: %d \n",floor_count);
   PRINT("Navigation state is: %d \n",navigation_state);
 
 
   switch (navigation_state) {
     case SAFE:
+      PRINT("SAFE STATE");
       // If not inside, state to OOB
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
@@ -200,6 +201,10 @@ void mav_exercise_periodic(void) {
         {
           navigation_state = GOBACK;
         }
+      }
+      else if(floor_count < green_thresh)
+      {
+    	  navigation_state = GOBACK;
       }
       // Otherwise if optical flow difference is above threshold, switch to turning state
       else if(fabs(of_diff)>of_diff_thresh)
@@ -219,6 +224,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case TURN:
+      PRINT("TURN STATE");
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
         navigation_state = OUT_OF_BOUNDS;
@@ -237,6 +243,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case GOBACK:
+      PRINT("GOBACK STATE");
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y )) {
           navigation_state = OUT_OF_BOUNDS;
         }
@@ -257,17 +264,17 @@ void mav_exercise_periodic(void) {
       break;
 
     case OUT_OF_BOUNDS:
+      PRINT("OOB STATE");
       // Always stopping
       guidance_h_set_guided_body_vel(0, 0);
       // On 'first' loop, reverse a bit and set target heading
       if(count_oob == 0)
       {
-
           guidance_h_set_guided_body_vel(-1, 0);
       	  guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi + RadOfDeg(160));
       }
       // Essentially a counter to make it wait so that it doesn't immediately go to another state
-      if(count_oob > 10)
+      if(count_oob > 7)
       {
     	  navigation_state = REENTER_ARENA;
     	  count_oob=0;
@@ -279,6 +286,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case REENTER_ARENA:
+      PRINT("REENTER STATE");
       // Keep going until back inside, then switch back to safe state
       if(!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
