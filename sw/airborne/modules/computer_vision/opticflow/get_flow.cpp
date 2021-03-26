@@ -49,7 +49,7 @@ int get_flow(char *prev, char *next,
   cvtColor(M1, prevmat, CV_YUV2GRAY_Y422);
   cvtColor(M2, nextmat, CV_YUV2GRAY_Y422);
 
-  float scale = 0.5;
+  float scale = 0.25;
   resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
   resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
 
@@ -78,24 +78,24 @@ int get_flow(char *prev, char *next,
   Mat div_ux;
   Mat div_vy;
 
-  Sobel(flow_parts[0], div_ux, CV_32FC1, 1, 0, 3, 1, 0, BORDER_DEFAULT);
-  Sobel(flow_parts[0], div_vy, CV_32FC1, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+//  Sobel(flow_parts[0], div_ux, CV_32FC1, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+//  Sobel(flow_parts[0], div_vy, CV_32FC1, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+//
+//  *div = sum(div_ux)[0] + sum(div_vy)[0];
 
-  *div = sum(div_ux)[0] + sum(div_vy)[0];
-
-  Mat magnitude, angle, magn_norm;
-  cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
-  normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
-  angle *= ((1.f / 360.f) * (180.f / 255.f));
+//  Mat magnitude, angle, magn_norm;
+//  cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
+//  normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);
+//  angle *= ((1.f / 360.f) * (180.f / 255.f));
   //build hsv image
-  Mat _hsv[3], hsv, hsv8, bgr;
-  _hsv[0] = angle;
-  _hsv[1] = Mat::ones(angle.size(), CV_32F);
-  _hsv[2] = magn_norm;
-  merge(_hsv, 3, hsv);
-  hsv.convertTo(hsv8, CV_8U, 255.0);
-  cvtColor(hsv8, bgr, COLOR_HSV2BGR);
-  colorbgr_opencv_to_yuv422(bgr, prev, w, h);
+//  Mat _hsv[3], hsv, hsv8, bgr;
+//  _hsv[0] = angle;
+//  _hsv[1] = Mat::ones(angle.size(), CV_32F);
+//  _hsv[2] = magn_norm;
+//  merge(_hsv, 3, hsv);
+//  hsv.convertTo(hsv8, CV_8U, 255.0);
+//  cvtColor(hsv8, bgr, COLOR_HSV2BGR);
+//  colorbgr_opencv_to_yuv422(bgr, prev, w, h);
 
   return 0;
 }

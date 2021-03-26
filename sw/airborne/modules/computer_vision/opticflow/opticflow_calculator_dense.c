@@ -332,9 +332,9 @@ bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img,
 	}
   struct image_t flow;
 	image_copy(img, &opticflow->img_gray);
-  get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
-      opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
-      of_diff, &result->div_size, img->w, img->h);
+//  get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, &flow, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
+//      opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
+//      of_diff, &result->div_size, img->w, img->h);
   image_copy(&opticflow->prev_img_gray, img);
   image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
 
