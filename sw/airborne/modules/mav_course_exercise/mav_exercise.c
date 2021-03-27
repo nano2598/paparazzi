@@ -37,7 +37,7 @@
 
 
 # ifndef KPI
-# define KPI 0.001
+# define KPI 0.00296
 # endif
 
 # ifndef KDI
@@ -49,11 +49,11 @@
 # endif
 
 # ifndef YI
-# define YI 0.5
+# define YI 1.1
 # endif
 
 # ifndef VI
-# define VI 0.15
+# define VI 0.4
 # endif
 
 # ifndef DIVI
@@ -61,11 +61,11 @@
 # endif
 
 # ifndef OFDI
-# define OFDI 500
+# define OFDI 450
 # endif
 
 # ifndef GRDI
-# define GRDI 1000
+# define GRDI 1267
 # endif
 
 # ifndef DVDI
