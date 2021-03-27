@@ -106,7 +106,7 @@
   </settings>
 
   <autoload name="agl_dist"/>
-  <autoload name="video_thread"/>
+  <!--autoload name="video_thread"/-->
   <autoload name="pose_history"/>
 
   <header>
