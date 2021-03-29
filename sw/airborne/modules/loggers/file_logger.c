@@ -32,6 +32,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "std.h"
+#include "subsystems/abi.h"
 
 #include "mcu_periph/sys_time.h"
 #include "state.h"
@@ -43,15 +44,30 @@
 #include "firmwares/fixedwing/stabilization/stabilization_adaptive.h"
 #endif
 
+#ifndef FLOW_OPTICFLOW_ID
+#define FLOW_OPTICFLOW_ID ABI_BROADCAST
+#endif
 
 /** Set the default File logger path to the USB drive */
 #ifndef FILE_LOGGER_PATH
 #define FILE_LOGGER_PATH /data/video/usb
 #endif
 
+float div_1;
+double of_diff;
+
 /** The file pointer */
 static FILE *file_logger = NULL;
 
+static abi_event optical_flow_ev;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
+                               uint32_t __attribute__((unused)) now_ts, int16_t __attribute__((unused)) flow_x,int16_t __attribute__((unused)) flow_y,
+                               int16_t __attribute__((unused)) flow_der_x,
+                               int16_t __attribute__((unused)) flow_der_y,
+                               float __attribute__((unused)) noise_measurement, float div_size, double value) {
+  div_1 = div_size;
+  of_diff = value;
+}
 
 /** Logging functions */
 
@@ -67,11 +83,14 @@ static void file_logger_write_header(FILE *file) {
   fprintf(file, "vel_x,vel_y,vel_z,");
   fprintf(file, "att_phi,att_theta,att_psi,");
   fprintf(file, "rate_p,rate_q,rate_r,");
+  fprintf(file, "Optical flow difference,");
+  fprintf(file, "Estimated divergence,");
 #ifdef COMMAND_THRUST
   fprintf(file, "cmd_thrust,cmd_roll,cmd_pitch,cmd_yaw\n");
 #else
   fprintf(file, "h_ctl_aileron_setpoint,h_ctl_elevator_setpoint\n");
 #endif
+
 }
 
 /** Write CSV row
@@ -91,6 +110,8 @@ static void file_logger_write_row(FILE *file) {
   fprintf(file, "%f,%f,%f,", vel->x, vel->y, vel->z);
   fprintf(file, "%f,%f,%f,", att->phi, att->theta, att->psi);
   fprintf(file, "%f,%f,%f,", rates->p, rates->q, rates->r);
+  fprintf(file, "%lf,", of_diff);
+  fprintf(file, "%f,", div_1);
 #ifdef COMMAND_THRUST
   fprintf(file, "%d,%d,%d,%d\n",
       stabilization_cmd[COMMAND_THRUST], stabilization_cmd[COMMAND_ROLL],
@@ -98,6 +119,7 @@ static void file_logger_write_row(FILE *file) {
 #else
   fprintf(file, "%d,%d\n", h_ctl_aileron_setpoint, h_ctl_elevator_setpoint);
 #endif
+
 }
 
 
@@ -142,6 +164,8 @@ void file_logger_start(void)
   printf("[file_logger] Start logging to %s...\n", filename);
 
   file_logger_write_header(file_logger);
+  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
+
 }
 
 /** Stop the logger an nicely close the file */
