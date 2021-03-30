@@ -1,3 +1,6 @@
+// This is our main file for the navigation of our drone. It was based on the mav_exercise.c
+// for the mav_course_exercise module that was given as an example for the course.
+
 /*
  * Copyright (C) 2021 Matteo Barbera <matteo.barbera97@gmail.com>
  *
@@ -67,12 +70,12 @@
 
 // Optical flow difference threshold
 # ifndef OFDI
-# define OFDI 250
+# define OFDI 400
 # endif
 
 // Threshold for the 'green count' of the floor
 # ifndef GRDI
-# define GRDI 2000
+# define GRDI 1000
 # endif
 
 // Divergence threshold (unused)
@@ -94,61 +97,39 @@ enum navigation_state_t {
   TURN
 };
 
-// define and initialise global variables
+// Define and initialise global variables
 enum navigation_state_t navigation_state = SAFE; // Start in safe state
 int32_t floor_count = 0;                // green color count from color filter for floor detection
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
 
-float div_1 = 0.f;
-float div_thresh = 0.f;
-float divergence_thresh = DVDI;
-double Kp = KPI;
-double Kd = KDI;
-double Kyd = KYD;
-bool rotated = 0;
-int count = 0;
-float yaw_rate = 0;
-float green_thresh = GRDI;
-float of_diff_thresh = OFDI;
+float div_1 = 0.f;                      // Divergence
+float divergence_thresh = DVDI;         // Divergence threshold
+double Kp = KPI;                        // Proportional gain for yaw rate control
+double Kd = KDI;                        // Derivative gain
+double Kyd = KYD;                       // 'Damping' gain
+float yaw_rate = 0;                     // yaw rate that we will set
+float green_thresh = GRDI;              // Threshold for the count of green pixels on the floor
+float of_diff_thresh = OFDI;            // Trheshold for the OF difference
 double of_diff;                          // difference in optical flow between right and left side
-double of_diff_prev = 0;
-float yaw_thresh = YI;
-float dr_vel = VI;
-int count_backwards=0;
-int count_robust=0;
-int count_oob=0;
-int robust = RBST;
-float heading_increment = 0.f;
-float oa_color_count_frac = 0.18f;
-float oag_floor_count_frac = 0.05f;
-int16_t obstacle_free_confidence = 0;
-float oob_haeding_increment = 5.f;
-float avoidance_heading_direction = 1.f;
-const int16_t max_trajectory_confidence = 5;
-// needed to receive output from a separate module running on a parallel process
+double of_diff_prev = 0;                // OF difference in previous loop
+float yaw_thresh = YI;                  // Threshold (limit) for the commnaded yaw rate
+float dr_vel = VI;                      // Forward velocity to be commanded
+int count_backwards=0;                  // Counter for the GOBACK state
+int count_oob=0;                        // Counter for OOB state
+int robust = RBST;                      // Threshold for counter below for the divergence
+int count_robust = 0;                 // Counter to keep track of divergence exceeding set threshold
 
-#ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
-#define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
-#endif //Need to remove this before hand-in
-
+// For our OF diff message
 #ifndef OF_DIFF_DIV_ID
 #define OF_DIFF_DIV_ID ABI_BROADCAST
 #endif
 
+// For floor count message
 #ifndef FLOOR_VISUAL_DETECTION_ID
 #define FLOOR_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif
 
-//static abi_event color_detection_ev;
-//static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
-//                               int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
-//                               int16_t __attribute__((unused)) pixel_width,
-//                               int16_t __attribute__((unused)) pixel_height,
-//                               int32_t quality, int16_t __attribute__((unused)) extra) {
-//  color_count = quality;
-//} //Need to remove this before hand-in
-
-
+// Event and callback for floor green pixel count message
 static abi_event floor_detection_ev;
 static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_x, int16_t pixel_y,
@@ -159,6 +140,7 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
   floor_centroid = pixel_y;
 }
 
+// Event and callback for OF diff and div message
 static abi_event optical_flow_ev;
 static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id, double of_diff_value, float div_value) {
   div_1 = div_value;
@@ -167,38 +149,36 @@ static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id, double of
 
 
 void mav_exercise_init(void) {
-  // bind our colorfilter callbacks to receive the color filter outputs
-//  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
-
+  // bind callbacks
   AbiBindMsgOF_DIFF_DIV(OF_DIFF_DIV_ID, &optical_flow_ev, optical_flow_cb);
   AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
 }
 
 void mav_exercise_periodic(void) {
-  // only evaluate our state machine if we are flying
+  // Only evaluate our state machine if we are flying (in guided mode)
 
   if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
     navigation_state = SAFE;
     return;
   }
 
+  // Printing of useful numbers
   PRINT("OF difference: %f \n", of_diff);
   PRINT("OF difference prev: %f \n", of_diff_prev);
   PRINT("Yaw rate: %f \n", stateGetBodyRates_f()->r);
   PRINT("Divergence value is: %f \n",div_1);
   PRINT("Green count value is: %d \n",floor_count);
-  PRINT("Navigation state is: %d \n",navigation_state);
-
 
   switch (navigation_state) {
+    // Safe state, when there is no need to avoid anything
     case SAFE:
       PRINT("SAFE STATE \n");
-      // If not inside, state to OOB
+      // First check, if not inside, set state to OOB
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
         navigation_state = OUT_OF_BOUNDS;
       }
-      // If divergence is above threshold several times, go back
+      // If divergence is above threshold several times, set state to GOBACK
       else if(div_1 > divergence_thresh)
       {
         count_robust++;
@@ -207,6 +187,7 @@ void mav_exercise_periodic(void) {
           navigation_state = GOBACK;
         }
       }
+      // Also check green pixel count on floor, if below threshold, also set state to GOBACK
       else if(floor_count < green_thresh)
       {
     	  navigation_state = GOBACK;
@@ -217,19 +198,20 @@ void mav_exercise_periodic(void) {
           count_robust = 0;
           navigation_state = TURN;
       }
-      // Otherwise just go forward
+      // Otherwise just keep going forward
       else
       {
           count_robust = 0;
-          yaw_rate =0;
           PRINT("NO ROTATION \n");
           guidance_h_set_guided_body_vel(dr_vel, 0);
+          guidance_h_set_guided_heading_rate(0);
       }
 
       break;
-
+    // Turn state, when turning is necessary to avoid obstacles
     case TURN:
       PRINT("TURN STATE \n");
+      // OOB check again first
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
         navigation_state = OUT_OF_BOUNDS;
@@ -239,6 +221,7 @@ void mav_exercise_periodic(void) {
       {
         navigation_state = SAFE;
       }
+      // Same check as before for green pixel count on floor
       else if(floor_count < green_thresh)
       {
     	  navigation_state = GOBACK;
@@ -276,20 +259,21 @@ void mav_exercise_periodic(void) {
       PRINT("OOB STATE \n");
       // Always stopping
       guidance_h_set_guided_body_vel(0, 0);
-      // On 'first' loop, reverse a bit and set target heading
+      // On 'first' loop, reverse a bit and set target heading to current + 160 deg
       if(count_oob == 0)
       {
           guidance_h_set_guided_body_vel(-dr_vel, 0);
       	  guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi + RadOfDeg(160));
       }
-      // Essentially a counter to make it wait so that it doesn't immediately go to another state
-      if(count_oob > 7)
+      // Essentially a counter to make it wait so that it doesn't immediately go to next state
+      if(count_oob > 6)
       {
     	  navigation_state = REENTER_ARENA;
     	  count_oob=0;
       }
       else
       {
+    	  // Increase counter
     	  count_oob++;
       }
       break;
@@ -299,12 +283,12 @@ void mav_exercise_periodic(void) {
       // Keep going until back inside, then switch back to safe state
 
     	  guidance_h_set_guided_body_vel(dr_vel, 0);
-
+          // If green count very low, likely facing wrong direction even after OOB turn, so turn a bit more
     	  if (floor_count < green_thresh)
     	  {
           	  guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi + RadOfDeg(60));
     	  }
-
+    	  // Once inside again, go back to safe state
     	  else if(InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
     	  {
     		  navigation_state = SAFE;
@@ -320,6 +304,7 @@ void mav_exercise_periodic(void) {
 
 
   }
+  // Update previous value of OF diff for next loop
   of_diff_prev = of_diff;
   return;
 }
