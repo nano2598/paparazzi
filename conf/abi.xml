@@ -204,6 +204,16 @@
       <field name="yaw"       type="int16_t">Yaw input in pprz_t [-9600;9600]</field>
       <field name="throttle"  type="int16_t">Throttle input in pprz_t [0;9600] or [-9600;9600] (for vertical speed control for instance)</field>
     </message>
+    
+    <message name="OF_DIFF_DIV" id="29">
+      <!-- 
+           Message to send two values we calculate from a dense optical flow estimation:
+           difference in magnitude of the flow for the left and right side of the image, and
+           an estimated divergence value for the point at the center of the image.
+      -->
+      <field name="of_diff"   type="double">Optical flow difference</field>
+      <field name="div"       type="float">Estimated divergence</field>
+    </message>
 
   </msg_class>
 

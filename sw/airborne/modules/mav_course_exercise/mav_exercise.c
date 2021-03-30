@@ -122,22 +122,22 @@ const int16_t max_trajectory_confidence = 5;
 #define ORANGE_AVOIDER_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif //Need to remove this before hand-in
 
-#ifndef FLOW_OPTICFLOW_ID
-#define FLOW_OPTICFLOW_ID ABI_BROADCAST
+#ifndef OF_DIFF_DIV_ID
+#define OF_DIFF_DIV_ID ABI_BROADCAST
 #endif
 
 #ifndef FLOOR_VISUAL_DETECTION_ID
 #define FLOOR_VISUAL_DETECTION_ID ABI_BROADCAST
 #endif
 
-static abi_event color_detection_ev;
-static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
-                               int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
-                               int16_t __attribute__((unused)) pixel_width,
-                               int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra) {
-  color_count = quality;
-} //Need to remove this before hand-in
+//static abi_event color_detection_ev;
+//static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
+//                               int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
+//                               int16_t __attribute__((unused)) pixel_width,
+//                               int16_t __attribute__((unused)) pixel_height,
+//                               int32_t quality, int16_t __attribute__((unused)) extra) {
+//  color_count = quality;
+//} //Need to remove this before hand-in
 
 
 static abi_event floor_detection_ev;
@@ -151,21 +151,17 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 }
 
 static abi_event optical_flow_ev;
-static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id,
-                               uint32_t __attribute__((unused)) now_ts, int16_t __attribute__((unused)) flow_x,int16_t __attribute__((unused)) flow_y,
-                               int16_t __attribute__((unused)) flow_der_x,
-                               int16_t __attribute__((unused)) flow_der_y,
-                               float __attribute__((unused)) noise_measurement, float div_size, double value) {
-  div_1 = div_size;
-  of_diff = value;
+static void optical_flow_cb(uint8_t __attribute__((unused)) sender_id, double of_diff_value, float div_value) {
+  div_1 = div_value;
+  of_diff = of_diff_value;
 }
 
 
 void mav_exercise_init(void) {
   // bind our colorfilter callbacks to receive the color filter outputs
-  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
+//  AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
 
-  AbiBindMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, &optical_flow_ev, optical_flow_cb);
+  AbiBindMsgOF_DIFF_DIV(OF_DIFF_DIV_ID, &optical_flow_ev, optical_flow_cb);
   AbiBindMsgVISUAL_DETECTION(FLOOR_VISUAL_DETECTION_ID, &floor_detection_ev, floor_detection_cb);
 }
 

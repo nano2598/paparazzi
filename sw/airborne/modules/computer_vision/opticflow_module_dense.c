@@ -24,6 +24,9 @@
  *
  */
 
+// This module estimates the dense optical flow using the Farneback algorithm which is already implemented
+// as an openCV function. The module was directly based (copied and then modified) from the opticflow_module that
+// was included as an example, of which the copyright is included above.
 
 #include "opticflow_module_dense.h"
 
@@ -39,12 +42,6 @@
 
 #include "cv.h"
 
-//#include <opencv2/core/core_c.h>
-//#include <opencv2/highgui/highgui.hpp>
-//#include <opencv2/imgproc/imgproc.hpp>
-//#include <opencv2/videoio.hpp>
-//#include <opencv2/video/tracking_c.h>
-
 /* ABI messages sender ID */
 #ifndef OPTICFLOW_AGL_ID
 #define OPTICFLOW_AGL_ID ABI_BROADCAST    ///< Default sonar/agl to use in opticflow visual_estimator
@@ -59,39 +56,41 @@ PRINT_CONFIG_VAR(OPTICFLOW_FPS)
 #define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
 /* The main opticflow variables */
-struct opticflow_t opticflow;                      ///< Opticflow calculations
-static struct opticflow_result_t opticflow_result; ///< The opticflow result
-double value;
+struct opticflow_t opticflow;                      ///< Struct to store opticflow parameters, like two images in
+												   /// sequence. Directly taken from the original opticflow_module
+                                                   //  given as example
+double of_diff; 								   // Difference in optical flow between right and left sides
+float divg;                                         // Divergence
 
 static bool opticflow_got_result;                ///< When we have an optical flow calculation
-static pthread_mutex_t opticflow_mutex;            ///< Mutex lock fo thread safety
+static pthread_mutex_t opticflow_mutex;            ///< Mutex lock for thread safety
 
 /* Static functions */
 struct image_t *opticflow_module_calc(struct image_t *img);     ///< The main optical flow calculation thread
 
-#if PERIODIC_TELEMETRY
-#include "subsystems/datalink/telemetry.h"
-/**
- * Send optical flow telemetry information
- * @param[in] *trans The transport structure to send the information over
- * @param[in] *dev The link to send the data over
- */
-static void opticflow_telem_send(struct transport_tx *trans, struct link_device *dev)
-{
-  pthread_mutex_lock(&opticflow_mutex);
-  if (opticflow_result.noise_measurement < 0.8) {
-    pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
-                                 &opticflow_result.fps, &opticflow_result.corner_cnt,
-                                 &opticflow_result.tracked_cnt, &opticflow_result.flow_x,
-                                 &opticflow_result.flow_y, &opticflow_result.flow_der_x,
-                                 &opticflow_result.flow_der_y, &opticflow_result.vel_body.x,
-                                 &opticflow_result.vel_body.y, &opticflow_result.vel_body.z,
-                                 &opticflow_result.div_size, &opticflow_result.surface_roughness,
-                                 &opticflow_result.divergence); // TODO: no noise measurement here...
-  }
-  pthread_mutex_unlock(&opticflow_mutex);
-}
-#endif
+//#if PERIODIC_TELEMETRY
+//#include "subsystems/datalink/telemetry.h"
+///**
+// * Send optical flow telemetry information
+// * @param[in] *trans The transport structure to send the information over
+// * @param[in] *dev The link to send the data over
+// */
+//static void opticflow_telem_send(struct transport_tx *trans, struct link_device *dev)
+//{
+//  pthread_mutex_lock(&opticflow_mutex);
+//  if (opticflow_result.noise_measurement < 0.8) {
+//    pprz_msg_send_OPTIC_FLOW_EST(trans, dev, AC_ID,
+//                                 &opticflow_result.fps, &opticflow_result.corner_cnt,
+//                                 &opticflow_result.tracked_cnt, &opticflow_result.flow_x,
+//                                 &opticflow_result.flow_y, &opticflow_result.flow_der_x,
+//                                 &opticflow_result.flow_der_y, &opticflow_result.vel_body.x,
+//                                 &opticflow_result.vel_body.y, &opticflow_result.vel_body.z,
+//                                 &opticflow_result.div_size, &opticflow_result.surface_roughness,
+//                                 &opticflow_result.divergence); // TODO: no noise measurement here...
+//  }
+//  pthread_mutex_unlock(&opticflow_mutex);
+//}
+//#endif
 
 /**
  * Initialize the optical flow module for the bottom camera
@@ -104,9 +103,9 @@ void opticflow_module_init(void)
 
   cv_add_to_device(&OPTICFLOW_CAMERA, opticflow_module_calc, OPTICFLOW_FPS);
 
-#if PERIODIC_TELEMETRY
-  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_OPTIC_FLOW_EST, opticflow_telem_send);
-#endif
+//#if PERIODIC_TELEMETRY
+//  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_OPTIC_FLOW_EST, opticflow_telem_send);
+//#endif
 
 }
 
@@ -120,24 +119,7 @@ void opticflow_module_run(void)
   // Update the stabilization loops on the current calculation
   if (opticflow_got_result) {
     uint32_t now_ts = get_sys_time_usec();
-    AbiSendMsgOPTICAL_FLOW(FLOW_OPTICFLOW_ID, now_ts,
-                           opticflow_result.flow_x,
-                           opticflow_result.flow_y,
-                           opticflow_result.flow_der_x,
-                           opticflow_result.flow_der_y,
-                           opticflow_result.noise_measurement,
-                           opticflow_result.div_size, value);
-    //TODO Find an appropriate quality measure for the noise model in the state filter, for now it is tracked_cnt
-    if (opticflow_result.noise_measurement < 0.8) {
-      AbiSendMsgVELOCITY_ESTIMATE(VEL_OPTICFLOW_ID, now_ts,
-                                  opticflow_result.vel_body.x,
-                                  opticflow_result.vel_body.y,
-                                  0.0f, //opticflow_result.vel_body.z,
-                                  opticflow_result.noise_measurement,
-                                  opticflow_result.noise_measurement,
-                                  -1.0f //opticflow_result.noise_measurement // negative value disables filter updates with OF-based vertical velocity.
-                                 );
-    }
+    AbiSendMsgOF_DIFF_DIV(ABI_OF_DIFF_DIV_ID, of_diff, divg);
     opticflow_got_result = false;
   }
   pthread_mutex_unlock(&opticflow_mutex);
@@ -152,20 +134,16 @@ void opticflow_module_run(void)
  */
 struct image_t *opticflow_module_calc(struct image_t *img)
 {
-  // Copy the state
-  // TODO : put accelerometer values at pose of img timestamp
-  //struct opticflow_state_t temp_state;
-  struct pose_t pose = get_rotation_at_timestamp(img->pprz_ts);
-  img->eulers = pose.eulers;
 
   // Do the optical flow calculation
   static struct opticflow_result_t temp_result; // static so that the number of corners is kept between frames
-  double temp_value;
-  if(opticflow_calc_frame_dense(&opticflow, img, &temp_result, &temp_value)){
+  double temp_of_diff;
+  float temp_div;
+  if(opticflow_calc_frame_dense(&opticflow, img, &temp_of_diff, &temp_div)){
     // Copy the result if finished
     pthread_mutex_lock(&opticflow_mutex);
-    opticflow_result = temp_result;
-    value = temp_value;
+    of_diff = temp_of_diff;
+    divg = temp_div;
     opticflow_got_result = true;
     pthread_mutex_unlock(&opticflow_mutex);
   }

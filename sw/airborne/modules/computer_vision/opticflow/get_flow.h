@@ -32,8 +32,7 @@
 extern "C" {
 #endif
 
-int get_flow(char *prev, char *next,
-        struct image_t *flow, double pyr_scale, int levels, int winsize,
+int get_flow(char *prev, char *next, double pyr_scale, int levels, int winsize,
         int iterations, int poly_n, double poly_sigma, int flags, double *of_diff, float *div, int w, int h);
 
 #ifdef __cplusplus
