@@ -1,3 +1,7 @@
+// This file was also based on the opticflow_calc.c file used for the
+// cv_opticflow module given as an example, removing many of the functions
+// and code we didn't need and adapting it.
+
 /*
  * Copyright (C) 2014 Hann Woei Ho
  *               2015 Freek van Tienen <freek.v.tienen@gmail.com>
@@ -39,12 +43,12 @@
 // Computer Vision
 #include "lib/vision/image.h"
 #include "modules/sonar/agl_dist.h"
-
+// Header for our c++ file that has the openCV function
 #include "get_flow.h"
 
 // to get the definition of front_camera / bottom_camera
 #include BOARD_CONFIG
-
+// Parameters for the cvOpticalFlowFarneback function
 #ifndef OPTICFLOW_WINDOW_SIZE
 #define OPTICFLOW_WINDOW_SIZE 10
 #endif
@@ -82,12 +86,17 @@ PRINT_CONFIG_VAR(OPTICFLOW_MAX_ITERATIONS)
 
 #define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
+// Function from the original file this was based on, might use
 /* Functions only used here */
 static uint32_t timeval_diff(struct timeval *starttime, struct timeval *finishtime);
 /**
  * Initialize the opticflow calculator
  * @param[out] *opticflow The new optical flow calculator
  */
+
+// Initializing the values for the settings for the
+// OpenCV function that will be used, stored in the
+// opticflow struct from the original file
 void opticflow_calc_init(struct opticflow_t *opticflow)
 {
   /* Set the default values */
@@ -101,35 +110,51 @@ void opticflow_calc_init(struct opticflow_t *opticflow)
 
 }
 
+// Function that does the 'organizing' of the incoming images, and calls the c++ function
+// which will then call the openCV function.
 bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img, double *of_diff, float *div)
 {
+	// Checking if the very first image has been received
 	if (!opticflow->got_first_img) {
+		// Creating images to store the incoming images
 		image_create(&opticflow->img_gray, img->w, img->h, IMAGE_YUV422);
 		image_create(&opticflow->prev_img_gray, img->w, img->h, IMAGE_YUV422);
+
+		// Store very first image in the opticflow struct
 		image_copy(img, &opticflow->prev_img_gray);
+
+		// Set this to true so it won't go into this condition again
 		opticflow->got_first_img = true;
+
+		// Return false since no calculation yet
 		return false;
 	}
-	struct image_t flow;
+
+	// We should have previous image from the previous loop, so store 'current' in opticflow struct
 	image_copy(img, &opticflow->img_gray);
 
+	// Clock so that we can time the optical flow calculation function
 	clock_t start, end;
 	double cpu_time_used;
 
 	start = clock();
 
+	// This is the main function where the optic flow is calculated
 	get_flow(opticflow->prev_img_gray.buf, opticflow->img_gray.buf, opticflow->pyr_scale, opticflow->levels, opticflow->window_size,
 	  opticflow->max_iterations, opticflow->poly_n, opticflow->poly_sigma, opticflow->flags,
 	  of_diff, div, img->w, img->h);
 	end = clock();
-	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+	cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC; // Calculating elapsed time
 	PRINT("Time taken %lf \n", cpu_time_used);
-	image_copy(&opticflow->prev_img_gray, img);
+//	image_copy(&opticflow->prev_img_gray, img);                // This is only needed if you want to show
+	                                                           // the 'colored' optic flow image
+	// Put current image in previous to be ready for next loop
 	image_switch(&opticflow->img_gray, &opticflow->prev_img_gray);
 
   return true;
 }
 
+// Also essentiallly from original file we based this on
 /**
  * Run the optical flow on a new image frame
  * @param[in] *opticflow The opticalflow structure that keeps track of previous images
@@ -140,13 +165,13 @@ bool calc_farneback(struct opticflow_t *opticflow, struct image_t *img, double *
 bool opticflow_calc_frame_dense(struct opticflow_t *opticflow, struct image_t *img,
 		double *of_diff, float *div)
 {
-  // Attempted to use calc_fast9_lucas_kanade as template
   bool flow_successful = false;
-  flow_successful = calc_farneback(opticflow, img, of_diff, div);
+  flow_successful = calc_farneback(opticflow, img, of_diff, div);   // calc_farneback defined just above
 
   return flow_successful;
 }
 
+// From original file, might be useful
 /**
  * Calculate the difference from start till finish
  * @param[in] *starttime The start time to calculate the difference from

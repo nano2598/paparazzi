@@ -70,7 +70,7 @@
 
 // Optical flow difference threshold
 # ifndef OFDI
-# define OFDI 400
+# define OFDI 300
 # endif
 
 // Threshold for the 'green count' of the floor
@@ -101,6 +101,9 @@ enum navigation_state_t {
 enum navigation_state_t navigation_state = SAFE; // Start in safe state
 int32_t floor_count = 0;                // green color count from color filter for floor detection
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
+
+float div_thresh = 0.f;                 // From original file
+float heading_increment = 0.f;
 
 float div_1 = 0.f;                      // Divergence
 float divergence_thresh = DVDI;         // Divergence threshold
@@ -295,8 +298,6 @@ void mav_exercise_periodic(void) {
     	  }
 
       break;
-
-
 
     default:
       break;
