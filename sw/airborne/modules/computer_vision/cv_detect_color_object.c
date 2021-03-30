@@ -1,3 +1,5 @@
+// File only slightly adjusted at line 224 to look at a specific 'column' of the image instead
+// of at the whole image
 /*
  * Copyright (C) 2019 Kirk Scheper <kirkscheper@gmail.com>
  *
@@ -217,6 +219,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
   uint8_t *buffer = img->buf;
 
   // Go through all the pixels
+  // Note our single adjustment to only focus on a central
+  // 'column' of the image to check for green
   for (uint16_t y = 3*img->h/8; y < 5*img->h/8; y++) {
     for (uint16_t x = 0; x < img->w/2; x ++) {
       // Check if the color is inside the specified values

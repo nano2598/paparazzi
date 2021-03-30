@@ -1,3 +1,7 @@
+// This file was also based on the opticflow_module.c file used for the
+// cv_opticflow module given as an example, removing many of the functions
+// and code we didn't need and adapting it.
+
 /*
  * Copyright (C) 2014 Hann Woei Ho
  *
@@ -65,6 +69,7 @@ float divg;                                         // Divergence
 static bool opticflow_got_result;                ///< When we have an optical flow calculation
 static pthread_mutex_t opticflow_mutex;            ///< Mutex lock for thread safety
 
+// Not used right now but could be adapted for telemetry of our own message
 /* Static functions */
 struct image_t *opticflow_module_calc(struct image_t *img);     ///< The main optical flow calculation thread
 
@@ -93,7 +98,7 @@ struct image_t *opticflow_module_calc(struct image_t *img);     ///< The main op
 //#endif
 
 /**
- * Initialize the optical flow module for the bottom camera
+ * Initialize the optical flow module
  */
 void opticflow_module_init(void)
 {
@@ -103,6 +108,7 @@ void opticflow_module_init(void)
 
   cv_add_to_device(&OPTICFLOW_CAMERA, opticflow_module_calc, OPTICFLOW_FPS);
 
+// Again not used right now but could be implemented with our message
 //#if PERIODIC_TELEMETRY
 //  register_periodic_telemetry(DefaultPeriodic, PPRZ_MSG_ID_OPTIC_FLOW_EST, opticflow_telem_send);
 //#endif
@@ -119,6 +125,8 @@ void opticflow_module_run(void)
   // Update the stabilization loops on the current calculation
   if (opticflow_got_result) {
     uint32_t now_ts = get_sys_time_usec();
+
+    // Send OF difference and divergence with our message
     AbiSendMsgOF_DIFF_DIV(ABI_OF_DIFF_DIV_ID, of_diff, divg);
     opticflow_got_result = false;
   }
@@ -136,9 +144,8 @@ struct image_t *opticflow_module_calc(struct image_t *img)
 {
 
   // Do the optical flow calculation
-  static struct opticflow_result_t temp_result; // static so that the number of corners is kept between frames
-  double temp_of_diff;
-  float temp_div;
+  double temp_of_diff;       // temp for the OF difference
+  float temp_div;            // temp for the divergence
   if(opticflow_calc_frame_dense(&opticflow, img, &temp_of_diff, &temp_div)){
     // Copy the result if finished
     pthread_mutex_lock(&opticflow_mutex);

@@ -1,4 +1,6 @@
-/* This file was based on opencv_example.cpp
+/* This file's structure based on opencv_example.cpp. It uses an openCV function to
+ * calculate the optical flow, then uses that to calculate some parameters
+ * we use for control.
  *
  * Copyright (C) C. De Wagter
  *
@@ -41,56 +43,78 @@ int get_flow(char *prev, char *next, double pyr_scale, int levels, int winsize,
   Mat M1(h, w, CV_8UC2, prev);
   Mat M2(h, w, CV_8UC2, next);
 
+  // Mats to store the images
   Mat prevmat;
   Mat nextmat;
 
+  // How many pixel to trim from the sides (trim_h) and top and bottom (trim_w)
   int trim_h = 25;
   int trim_w = 10;
 
+  // rectangle object to be used for cropping
   Rect crop;
   crop.x = trim_w;
   crop.y = trim_h;
   crop.width = w - (trim_w*2);
   crop.height = h - (trim_h*2);
 
+  // Copying images onto mats, first cropping, then converting from YUV to grayscale
   cvtColor(M1(crop), prevmat, CV_YUV2GRAY_Y422);
   cvtColor(M2(crop), nextmat, CV_YUV2GRAY_Y422);
 
+  // Scale for resizing
   float scale = 0.2;
+  // Resizing both images
   resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
   resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
 
+  // Mat to store the flow, 2 channels, one for x and another for y component
   Mat flowmat(prevmat.rows, prevmat.cols, CV_32FC2);
 
+  // openCV function that calculates the optical flow, using parameters that
+  // have been defined as adjustable settings, and the two images
   calcOpticalFlowFarneback(prevmat, nextmat,
                                  flowmat, pyr_scale, levels, winsize,
                                   iterations,  poly_n,  poly_sigma, flags);
 
 
-
+  // Dividing flow into flow on the left and right sides of image
+  // Not the image is 'rotated,' so the width is the height and vice-versa
   Mat leftflow = flowmat(Range(0, flowmat.rows/2), Range::all());
   Mat rightflow = flowmat(Range(flowmat.rows/2, flowmat.rows), Range::all());
 
   Mat magnitudeleft, angleleft, magnituderight, angleright;
   Mat flow_parts_left[2], flow_parts_right[2];
+
+  // Splitting the left and right flows into their x- and y-components
   split(leftflow, flow_parts_left);
   split(rightflow, flow_parts_right);
+
+  // CV funciton to convert to polar, gives us the magnitudes which we need
   cartToPolar(flow_parts_left[0], flow_parts_left[1], magnitudeleft, angleleft, true);
   cartToPolar(flow_parts_right[0], flow_parts_right[1], magnituderight, angleright, true);
 
+  // Calculating difference of magnitues of the left and right flows
   *of_diff = sum(magnituderight)[0] - sum(magnitudeleft)[0];
 
+  // Splitting again, but the entire flow into x and y
   Mat flow_parts[2];
   split(flowmat, flow_parts);
 
   Mat div_ux;
   Mat div_vy;
 
+  // Using opencv function Sobel to calculate gradients
+  // First gradient of x-vectors in x direction, then gradients
+  // of y-vectors in y direction, to get estimation of divergence when summing
   Sobel(flow_parts[0], div_ux, CV_32FC1, 1, 0, 3, 1, 0, BORDER_DEFAULT);
   Sobel(flow_parts[0], div_vy, CV_32FC1, 0, 1, 3, 1, 0, BORDER_DEFAULT);
 
+  // Summing to calculate divergence
   *div = sum(div_ux)[0] + sum(div_vy)[0];
 
+  // This can be uncommented if you want the visualization on the video stream
+  // though due to our resizing it looks very small, and it's not very informtive either way
 //  Mat magnitude, angle, magn_norm;
 //  cartToPolar(flow_parts[0], flow_parts[1], magnitude, angle, true);
 //  normalize(magnitude, magn_norm, 0.0f, 1.0f, NORM_MINMAX);

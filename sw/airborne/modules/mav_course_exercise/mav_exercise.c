@@ -70,7 +70,7 @@
 
 // Optical flow difference threshold
 # ifndef OFDI
-# define OFDI 300
+# define OFDI 350
 # endif
 
 // Threshold for the 'green count' of the floor
@@ -80,7 +80,7 @@
 
 // Divergence threshold (unused)
 # ifndef DVDI
-# define DVDI 900
+# define DVDI 2000
 # endif
 
 // How many times divergence has to be above threshold to trigger obstacle avoidace (unused)
