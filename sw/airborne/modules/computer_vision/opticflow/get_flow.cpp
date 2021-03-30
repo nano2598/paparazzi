@@ -40,18 +40,27 @@ int get_flow(char *prev, char *next, double pyr_scale, int levels, int winsize,
   // Create a new image, using the original bebop image.
   Mat M1(h, w, CV_8UC2, prev);
   Mat M2(h, w, CV_8UC2, next);
-  Mat flowmat(h, w, CV_32FC2);
 
   Mat prevmat;
   Mat nextmat;
 
-  cvtColor(M1, prevmat, CV_YUV2GRAY_Y422);
-  cvtColor(M2, nextmat, CV_YUV2GRAY_Y422);
+  int trim_h = 25;
+  int trim_w = 10;
+
+  Rect crop;
+  crop.x = trim_w;
+  crop.y = trim_h;
+  crop.width = w - (trim_w*2);
+  crop.height = h - (trim_h*2);
+
+  cvtColor(M1(crop), prevmat, CV_YUV2GRAY_Y422);
+  cvtColor(M2(crop), nextmat, CV_YUV2GRAY_Y422);
 
   float scale = 0.2;
   resize(prevmat, prevmat, Size(), scale, scale, CV_INTER_LINEAR);
   resize(nextmat, nextmat, Size(), scale, scale, CV_INTER_LINEAR);
 
+  Mat flowmat(prevmat.rows, prevmat.cols, CV_32FC2);
 
   calcOpticalFlowFarneback(prevmat, nextmat,
                                  flowmat, pyr_scale, levels, winsize,
@@ -59,8 +68,8 @@ int get_flow(char *prev, char *next, double pyr_scale, int levels, int winsize,
 
 
 
-  Mat leftflow = flowmat(Range(0, h/2 * scale), Range(0, w * scale));
-  Mat rightflow = flowmat(Range(h/2 * scale, h * scale), Range(0, w * scale));
+  Mat leftflow = flowmat(Range(0, flowmat.rows/2), Range::all());
+  Mat rightflow = flowmat(Range(flowmat.rows/2, flowmat.rows), Range::all());
 
   Mat magnitudeleft, angleleft, magnituderight, angleright;
   Mat flow_parts_left[2], flow_parts_right[2];

@@ -35,47 +35,57 @@
 
 #define PRINT(string, ...) fprintf(stderr, "[mav_exercise->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 
-
+// Proportional gain for the yaw rate control
 # ifndef KPI
-# define KPI 0.00296
+# define KPI 0.0025
 # endif
 
+// Derivative gain for the yaw rate control
 # ifndef KDI
 # define KDI 0.000001
 # endif
 
+// 'Damping' gain (unused)
 # ifndef KYD
-# define KYD 0.0
+# define KYD 1000
 # endif
 
+// Yaw rate magnitude limit
 # ifndef YI
 # define YI 1.1
 # endif
 
+// Nominal velocity command mangitude
 # ifndef VI
 # define VI 0.4
 # endif
 
+// (unused)
 # ifndef DIVI
 # define DIVI 0.0001f
 # endif
 
+// Optical flow difference threshold
 # ifndef OFDI
-# define OFDI 450
+# define OFDI 250
 # endif
 
+// Threshold for the 'green count' of the floor
 # ifndef GRDI
-# define GRDI 1267
+# define GRDI 2000
 # endif
 
+// Divergence threshold (unused)
 # ifndef DVDI
 # define DVDI 900
 # endif
 
+// How many times divergence has to be above threshold to trigger obstacle avoidace (unused)
 # ifndef RBST
 # define RBST 6
 # endif
 
+// States for our state machine
 enum navigation_state_t {
   SAFE,
   OUT_OF_BOUNDS,
@@ -85,8 +95,7 @@ enum navigation_state_t {
 };
 
 // define and initialise global variables
-enum navigation_state_t navigation_state = SAFE;
-int32_t color_count = 0;                //Need to remove this before hand-in
+enum navigation_state_t navigation_state = SAFE; // Start in safe state
 int32_t floor_count = 0;                // green color count from color filter for floor detection
 int32_t floor_centroid = 0;             // floor detector centroid in y direction (along the horizon)
 
@@ -144,7 +153,7 @@ static abi_event floor_detection_ev;
 static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
                                int16_t __attribute__((unused)) pixel_x, int16_t pixel_y,
                                int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra)
+                               int32_t quality, int16_t __attribute__((un45used)) extra)
 {
   floor_count = quality;
   floor_centroid = pixel_y;
@@ -183,7 +192,7 @@ void mav_exercise_periodic(void) {
 
   switch (navigation_state) {
     case SAFE:
-      PRINT("SAFE STATE");
+      PRINT("SAFE STATE \n");
       // If not inside, state to OOB
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
@@ -220,15 +229,19 @@ void mav_exercise_periodic(void) {
       break;
 
     case TURN:
-      PRINT("TURN STATE");
+      PRINT("TURN STATE \n");
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
       {
         navigation_state = OUT_OF_BOUNDS;
       }
       // If optical flow difference is below threshold, go back to safe state
-      if(fabs(of_diff)<of_diff_thresh)
+      if(fabs(of_diff)-fabs(Kyd * stateGetBodyRates_f()->r) < of_diff_thresh)
       {
         navigation_state = SAFE;
+      }
+      else if(floor_count < green_thresh)
+      {
+    	  navigation_state = GOBACK;
       }
       // Setting yaw rate to gain * optical flow difference, clipping at maximum and minimum yaw values
       yaw_rate =  -Kp * of_diff + Kd * (of_diff - of_diff_prev);
@@ -239,7 +252,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case GOBACK:
-      PRINT("GOBACK STATE");
+      PRINT("GOBACK STATE \n");
       if (!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y )) {
           navigation_state = OUT_OF_BOUNDS;
         }
@@ -247,7 +260,7 @@ void mav_exercise_periodic(void) {
       else if(count_backwards<=4)
       {
           guidance_h_set_guided_body_vel(-0.1, 0);
-          yaw_rate =0;
+          guidance_h_set_guided_heading_rate(0);
           count_backwards++;
           PRINT("GO BACK \n");
       }
@@ -260,7 +273,7 @@ void mav_exercise_periodic(void) {
       break;
 
     case OUT_OF_BOUNDS:
-      PRINT("OOB STATE");
+      PRINT("OOB STATE \n");
       // Always stopping
       guidance_h_set_guided_body_vel(0, 0);
       // On 'first' loop, reverse a bit and set target heading
@@ -282,16 +295,21 @@ void mav_exercise_periodic(void) {
       break;
 
     case REENTER_ARENA:
-      PRINT("REENTER STATE");
+      PRINT("REENTER STATE \n");
       // Keep going until back inside, then switch back to safe state
-      if(!InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
-      {
+
     	  guidance_h_set_guided_body_vel(dr_vel, 0);
-      }
-      else
-      {
-    	  navigation_state = SAFE;
-      }
+
+    	  if (floor_count < green_thresh)
+    	  {
+          	  guidance_h_set_guided_heading(stateGetNedToBodyEulers_f()->psi + RadOfDeg(60));
+    	  }
+
+    	  else if(InsideObstacleZone(stateGetPositionEnu_f()->x , stateGetPositionEnu_f()->y ))
+    	  {
+    		  navigation_state = SAFE;
+    	  }
+
       break;
 
 
